@@ -82,6 +82,10 @@ class Zeyple:
         if not recipients:
             logging.warn("Cannot find any recipients, ignoring")
 
+        sender_key = self._user_key(sender)
+        if not sender_key:
+            logging.warn("No key found for sender %s", sender)
+
         sent_messages = []
         for recipient in recipients:
             logging.info("Recipient: %s", recipient)
@@ -90,7 +94,7 @@ class Zeyple:
             logging.info("Key ID: %s", key_id)
 
             if key_id:
-                out_message = self._encrypt_message(in_message, key_id)
+                out_message = self._encrypt_message(in_message, key_id, sender_key)
 
             elif self.config.has_option('zeyple', 'force_encrypt') and \
                     self.config.getboolean('zeyple', 'force_encrypt'):
@@ -136,7 +140,7 @@ class Zeyple:
         del ret['MIME-Version']
         return ret
 
-    def _encrypt_message(self, in_message, key_id):
+    def _encrypt_message(self, in_message, key_id, sender_id):
         if in_message.is_multipart():
             # get the body (after the first \n\n)
             payload = in_message.as_string().split("\n\n", 1)[1].strip()
@@ -183,7 +187,7 @@ class Zeyple:
 
             payload = mixed.as_bytes()
 
-        encrypted_payload = self._encrypt_payload(payload, [key_id])
+        encrypted_payload = self._encrypt_payload(payload, [key_id], sender_id)
 
         version = self._get_version_part()
         encrypted = self._get_encrypted_part(encrypted_payload)
@@ -205,7 +209,7 @@ class Zeyple:
 
         return out_message
 
-    def _encrypt_payload(self, payload, key_ids):
+    def _encrypt_payload(self, payload, key_ids, sender_id):
         """Encrypts the payload with the given keys"""
         payload = encode_string(payload)
 
@@ -222,7 +226,7 @@ class Zeyple:
         (ciphertext, encresult, signresult) = self.gpg.encrypt(
             gpg.Data(string=payload),
             recipients=recipient,
-            sign=False,
+            sign=sender_id,
             always_trust=True
         )
 
