@@ -71,13 +71,13 @@ class Zeyple:
 
         return ctx
 
-    def process_message(self, message_data, recipients):
+    def process_message(self, message_data, sender, recipients):
         """Encrypts the message with recipient keys"""
         message_data = encode_string(message_data)
 
         in_message = email.message_from_bytes(message_data)
         logging.info(
-            "Processing outgoing message %s", in_message['Message-id'])
+            "Processing outgoing message %s from %s", in_message['Message-id'], sender)
 
         if not recipients:
             logging.warn("Cannot find any recipients, ignoring")
@@ -269,10 +269,11 @@ class Zeyple:
 
 
 if __name__ == '__main__':
-    recipients = sys.argv[1:]
+    sender = sys.argv[1]
+    recipients = sys.argv[2:]
 
     binary_stdin = sys.stdin.buffer
     message = binary_stdin.read()
 
     zeyple = Zeyple()
-    zeyple.process_message(message, recipients)
+    zeyple.process_message(message, sender, recipients)
